@@ -1,0 +1,4 @@
+name: PufferLink
+version: '1.0.0'
+main: org.bcnlab.pufferLink.PufferLink
+author: Vincent Wackler
