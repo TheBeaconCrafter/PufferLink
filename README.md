@@ -42,6 +42,7 @@ It is strongly recommended to:
 ## Commands
 
 - `/cloud list` - List all available servers
+- `/cloud up` - List all online servers
 - `/cloud status <id>` - View server status
 - `/cloud start <id>` - Start a server
 - `/cloud stop <id>` - Stop a server
