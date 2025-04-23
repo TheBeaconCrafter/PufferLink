@@ -20,13 +20,56 @@ import java.util.function.Consumer;
 
 public class PufferClient {
     private final String host;
-    private final String sessionCookie;
     private final PufferLink plugin;
+    private final PufferSession session;
+    private String sessionCookie;
 
     public PufferClient(String host, String sessionCookie, PufferLink plugin) {
         this.host = host;
         this.sessionCookie = sessionCookie;
         this.plugin = plugin;
+        this.session = null;
+    }
+
+    public PufferClient(String host, PufferSession session, PufferLink plugin) {
+        this.host = host;
+        this.session = session;
+        this.sessionCookie = session.getSessionCookie();
+        this.plugin = plugin;
+    }
+
+    private boolean handleAuthFailure() {
+        if (session == null) {
+            return false;
+        }
+        
+        if (session.reauth()) {
+            this.sessionCookie = session.getSessionCookie();
+            return true;
+        }
+        return false;
+    }
+
+    private CloseableHttpResponse executeWithRetry(CloseableHttpClient client, HttpGet request) throws Exception {
+        CloseableHttpResponse response = client.execute(request);
+        if (response.getCode() == 401 && handleAuthFailure()) {
+            // Update the auth cookie and retry
+            request.setHeader("Cookie", sessionCookie);
+            response.close();
+            return client.execute(request);
+        }
+        return response;
+    }
+
+    private CloseableHttpResponse executeWithRetry(CloseableHttpClient client, HttpPost request) throws Exception {
+        CloseableHttpResponse response = client.execute(request);
+        if (response.getCode() == 401 && handleAuthFailure()) {
+            // Update the auth cookie and retry
+            request.setHeader("Cookie", sessionCookie);
+            response.close();
+            return client.execute(request);
+        }
+        return response;
     }
 
     public void printAllServers() {
@@ -67,25 +110,23 @@ public class PufferClient {
             get.setHeader("Accept", "application/json");
             get.setHeader("Cookie", sessionCookie);
 
-            client.execute(get, response -> {
-                if (response.getCode() != 200) {
-                    plugin.getLogger().warning("Failed to get servers, code: " + response.getCode());
-                    callback.accept(Collections.emptyList());
-                    return null;
-                }
+            CloseableHttpResponse response = executeWithRetry(client, get);
+            if (response.getCode() != 200) {
+                plugin.getLogger().warning("Failed to get servers, code: " + response.getCode());
+                callback.accept(Collections.emptyList());
+                return;
+            }
 
-                JsonObject responseJson = JsonParser.parseReader(new InputStreamReader(response.getEntity().getContent())).getAsJsonObject();
-                JsonArray servers = responseJson.getAsJsonArray("servers");
+            JsonObject responseJson = JsonParser.parseReader(new InputStreamReader(response.getEntity().getContent())).getAsJsonObject();
+            JsonArray servers = responseJson.getAsJsonArray("servers");
 
-                List<JsonObject> serverList = new ArrayList<>();
-                if (servers != null) {
-                    for (JsonElement el : servers) {
-                        serverList.add(el.getAsJsonObject());
-                    }
+            List<JsonObject> serverList = new ArrayList<>();
+            if (servers != null) {
+                for (JsonElement el : servers) {
+                    serverList.add(el.getAsJsonObject());
                 }
-                callback.accept(serverList);
-                return null;
-            });
+            }
+            callback.accept(serverList);
         } catch (Exception e) {
             e.printStackTrace();
             callback.accept(Collections.emptyList());
@@ -99,17 +140,15 @@ public class PufferClient {
             get.setHeader("Accept", "application/json");
             get.setHeader("Cookie", sessionCookie);
 
-            client.execute(get, response -> {
-                if (response.getCode() != 200) {
-                    plugin.getLogger().warning("Failed to get server status, code: " + response.getCode());
-                    callback.accept(null);
-                    return null;
-                }
+            CloseableHttpResponse response = executeWithRetry(client, get);
+            if (response.getCode() != 200) {
+                plugin.getLogger().warning("Failed to get server status, code: " + response.getCode());
+                callback.accept(null);
+                return;
+            }
 
-                JsonObject statusJson = JsonParser.parseReader(new InputStreamReader(response.getEntity().getContent())).getAsJsonObject();
-                callback.accept(statusJson);
-                return null;
-            });
+            JsonObject statusJson = JsonParser.parseReader(new InputStreamReader(response.getEntity().getContent())).getAsJsonObject();
+            callback.accept(statusJson);
         } catch (Exception e) {
             e.printStackTrace();
             callback.accept(null);
@@ -126,10 +165,9 @@ public class PufferClient {
             StringEntity entity = new StringEntity(command);
             post.setEntity(entity);
 
-            try (CloseableHttpResponse response = client.execute(post)) {
-                int statusCode = response.getCode();
-                callback.accept(statusCode == 204 || statusCode == 200);
-            }
+            CloseableHttpResponse response = executeWithRetry(client, post);
+            int statusCode = response.getCode();
+            callback.accept(statusCode == 204 || statusCode == 200);
         } catch (Exception e) {
             e.printStackTrace();
             callback.accept(false);
@@ -143,10 +181,9 @@ public class PufferClient {
             post.setHeader("Accept", "application/json");
             post.setHeader("Cookie", sessionCookie);
 
-            try (CloseableHttpResponse response = client.execute(post)) {
-                int statusCode = response.getCode();
-                callback.accept(statusCode == 204 || statusCode == 200 || statusCode == 202);
-            }
+            CloseableHttpResponse response = executeWithRetry(client, post);
+            int statusCode = response.getCode();
+            callback.accept(statusCode == 204 || statusCode == 200 || statusCode == 202);
         } catch (Exception e) {
             e.printStackTrace();
             callback.accept(false);
@@ -160,10 +197,9 @@ public class PufferClient {
             post.setHeader("Accept", "application/json");
             post.setHeader("Cookie", sessionCookie);
 
-            try (CloseableHttpResponse response = client.execute(post)) {
-                int statusCode = response.getCode();
-                callback.accept(statusCode == 204 || statusCode == 200 || statusCode == 202);
-            }
+            CloseableHttpResponse response = executeWithRetry(client, post);
+            int statusCode = response.getCode();
+            callback.accept(statusCode == 204 || statusCode == 200 || statusCode == 202);
         } catch (Exception e) {
             e.printStackTrace();
             callback.accept(false);

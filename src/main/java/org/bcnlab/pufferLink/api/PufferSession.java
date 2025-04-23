@@ -60,4 +60,12 @@ public class PufferSession {
     public String getSessionCookie() {
         return sessionCookie;
     }
+
+    public void setSessionCookie(String cookie) {
+        this.sessionCookie = cookie;
+    }
+
+    public boolean reauth() {
+        return login();
+    }
 }

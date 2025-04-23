@@ -19,7 +19,7 @@ import java.nio.file.Files;
 public final class PufferLink extends Plugin {
     private Configuration config;
     private String pluginPrefix;
-    private String versionNumber = "1.0";
+    private String versionNumber = "1.1";
     private Boolean enableMonitor = true;
 
     private ServerMonitor serverMonitor;
@@ -48,7 +48,7 @@ public final class PufferLink extends Plugin {
         }
 
         // Register commands
-        PufferClient client = new PufferClient(apiUrl, session.getSessionCookie(), this);
+        PufferClient client = new PufferClient(apiUrl, session, this);
         getProxy().getPluginManager().registerCommand(this, new CloudCommand(client, this));
 
         // Server Monitor
