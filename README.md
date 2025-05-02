@@ -1,6 +1,8 @@
-# PufferLink
+# PufferLink (BungeeCord)
 
 A BungeeCord plugin for managing PufferPanel v3 servers directly from your Minecraft server. This plugin allows server administrators to control and monitor their PufferPanel servers through in-game commands.
+
+The Velocity version of this plugin is available [here](https://github.com/TheBeaconCrafter/PufferLinkV).
 
 > **Note:** This project is not affiliated with PufferPanel. For the official PufferPanel project, visit [PufferPanel GitHub](https://github.com/pufferpanel/pufferpanel)
 
